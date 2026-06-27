@@ -1,0 +1,60 @@
+name: Daily LinkedIn Jobs
+
+on:
+  schedule:
+    # 7:00 AM Asia/Kolkata is 1:30 AM UTC.
+    - cron: "30 1 * * *"
+  workflow_dispatch:
+
+jobs:
+  run-selenium-job:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build test image
+        run: docker build -t linkedin-jobs-runner .
+
+      - name: Run Selenium test
+        run: |
+          docker run --rm \
+            -e HEADLESS=true \
+            -v "${{ github.workspace }}/artifacts:/app/artifacts" \
+            -v "${{ github.workspace }}/reports:/app/reports" \
+            linkedin-jobs-runner
+
+      - name: Upload Excel report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linkedin-jobs-report
+          path: artifacts/linkedin_jobs.xlsx
+          if-no-files-found: warn
+
+      - name: Upload failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: selenium-failure-screenshots
+          path: reports/
+          if-no-files-found: ignore
+
+      - name: Set up Python for email
+        if: success()
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Email Excel report
+        if: success()
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM }}
+          MAIL_TO: morphgamingstop@gmail.com
+          ATTACHMENT_PATH: artifacts/linkedin_jobs.xlsx
+        run: python scripts/send_email.py

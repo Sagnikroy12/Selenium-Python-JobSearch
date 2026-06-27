@@ -1,0 +1,16 @@
+.git/
+.github/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+artifacts/
+reports/
+test-results/
+allure-results/
+allure-report/
+.env
+.env.*
+*.log
