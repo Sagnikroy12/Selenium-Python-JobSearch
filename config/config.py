@@ -23,7 +23,14 @@ class FrameworkConfig:
     artifacts_dir: Path = Path("artifacts")
     reports_dir: Path = Path("reports")
     keep_browser_open: bool = _get_bool_env("KEEP_BROWSER_OPEN", False)
-    headless: bool = _get_bool_env("HEADLESS", False)
+    headless: bool = _get_bool_env("HEADLESS", True)
+    chrome_bin: str = os.getenv("CHROME_BIN", "")
+    chromedriver_path: str = os.getenv("CHROMEDRIVER_PATH", "")
+    user_agent: str = os.getenv("USER_AGENT", "")
+    resume_pdf_path: Path = Path(os.getenv("RESUME_PDF_PATH", "my_resume.pdf"))
+    job_title_target: str = os.getenv("JOB_TITLE_TARGET", "Automation Engineer")
+    job_location_target: str = os.getenv("JOB_LOCATION_TARGET", "Hyderabad")
+    recipient_email: str = os.getenv("RECIPIENT_EMAIL", "morphgamingstop@gmail.com")
 
 
 config = FrameworkConfig()

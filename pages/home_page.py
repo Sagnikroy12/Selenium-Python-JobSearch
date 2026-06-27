@@ -67,3 +67,4 @@ class HomePage(BasePage):
         xlsx_path = config.artifacts_dir / "linkedin_jobs.xlsx"
         saved_path = ExcelWriter.write_rows(xlsx_path, job_rows, sheet_name="LinkedIn Jobs")
         print(f"Saved job listings to {saved_path}")
+        return saved_path
