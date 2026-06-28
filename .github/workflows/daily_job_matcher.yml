@@ -39,10 +39,10 @@ jobs:
 
       - name: Run scraper, ATS matcher, and email report
         env:
-          RESUME_PDF_PATH: ${{ github.event.inputs.resume_pdf_path || 'my_resume.pdf' }}
-          JOB_TITLE_TARGET: ${{ github.event.inputs.job_title_target || 'Automation Engineer' }}
-          JOB_LOCATION_TARGET: ${{ github.event.inputs.job_location_target || 'Hyderabad' }}
-          RECIPIENT_EMAIL: ${{ github.event.inputs.recipient_email || 'recipient@example.com' }}
+          RESUME_PDF_PATH: ${{ github.event.inputs.resume_pdf_path || vars.RESUME_PDF_PATH || 'my_resume.pdf' }}
+          JOB_TITLE_TARGET: ${{ github.event.inputs.job_title_target || vars.JOB_TITLE_TARGET || 'Automation Engineer' }}
+          JOB_LOCATION_TARGET: ${{ github.event.inputs.job_location_target || vars.JOB_LOCATION_TARGET || 'Hyderabad' }}
+          RECIPIENT_EMAIL: ${{ github.event.inputs.recipient_email || vars.RECIPIENT_EMAIL || 'recipient@example.com' }}
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
           SMTP_PORT: ${{ secrets.SMTP_PORT || '587' }}
           SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
