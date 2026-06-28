@@ -45,26 +45,45 @@ class HomePage(BasePage):
         job_items = self.driver.find_elements(By.XPATH, "//main[@id='main-content']//ul/li")
         print(f"Total jobs found: {len(job_items)}")
 
-        job_rows = [["Serial Number", "Job Title", "Job Description"]]
+        job_rows = [["Serial Number", "Job Title", "Job Link", "Job Description"]]
 
-        for i, job_item in enumerate(job_items[:10], start=1):
-            job_title_text = job_item.text.strip()
+        for i, job_item in enumerate(job_items[:100], start=1):
+            job_title_text = self._extract_full_job_card_text(job_item)
+            job_link = self._extract_job_link(job_item)
             description_text = ""
-
-            print(f"Job {i}:\n{job_title_text}\n{'-'*30}")
 
             try:
                 current_job_locator = (By.XPATH, self.locators.JOB_LIST[1].format(index=i))
                 self.click(current_job_locator)
                 time.sleep(2)
                 description_text = self.driver.find_element(*self.locators.JOB_DESCRIPTION).text.strip()
-                print(description_text)
             except Exception as e:
                 print(f"Could not read job description for job {i}: {e}")
 
-            job_rows.append([str(i), job_title_text, description_text])
+            job_rows.append([str(i), job_title_text, job_link, description_text])
 
         xlsx_path = config.artifacts_dir / "linkedin_jobs.xlsx"
         saved_path = ExcelWriter.write_rows(xlsx_path, job_rows, sheet_name="LinkedIn Jobs")
         print(f"Saved job listings to {saved_path}")
         return saved_path
+
+    def _extract_full_job_card_text(self, job_item):
+        card_text = self.driver.execute_script(
+            "return arguments[0].innerText || arguments[0].textContent || '';",
+            job_item,
+        )
+        return " ".join(card_text.split())
+
+    def _extract_job_link(self, job_item):
+        link = self.driver.execute_script(
+            """
+            const card = arguments[0];
+            const anchor =
+                card.querySelector('a[href*="/jobs/view/"]') ||
+                card.querySelector('a.base-card__full-link') ||
+                card.querySelector('a[href]');
+            return anchor ? anchor.href : '';
+            """,
+            job_item,
+        )
+        return (link or "").strip()

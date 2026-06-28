@@ -25,9 +25,10 @@ def main():
         excel_path=excel_path,
         resume_pdf_path=config.resume_pdf_path,
         recipient_email=config.recipient_email,
+        send_email=config.send_email,
     )
     print("Top ATS matches:")
-    print(top_matches[["Job Title", "Match Percentage"]].to_string(index=False))
+    print(top_matches[["Job Title", "ATS Score", "Recommendation"]].to_string(index=False))
 
 
 if __name__ == "__main__":

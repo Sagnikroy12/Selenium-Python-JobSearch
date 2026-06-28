@@ -14,3 +14,4 @@ class HomepageLocators:
     DATE_POSTED_DONE_BUTTON = (By.XPATH, "//button[@data-tracking-control-name='public_jobs_f_TPR' and @type='submit']")
     JOB_LIST = (By.XPATH, "//main[@id='main-content']//ul/li[{index}]")
     JOB_DESCRIPTION = (By.XPATH,"//div[contains(@class,'show-more-less-html')]")
+    JOB_TITLE_CARD_HEADING = (By.XPATH,"//h2[contains(@class,'top-card-layout')]")
