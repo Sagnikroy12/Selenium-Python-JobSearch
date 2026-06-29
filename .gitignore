@@ -31,6 +31,7 @@ allure-report/
 !.env.example
 *.local
 google-credentials.json
+credentials.json
 
 # IDE and OS noise
 .idea/
@@ -40,3 +41,4 @@ Thumbs.db
 
 # Project scratch files
 jobs.txt
+
