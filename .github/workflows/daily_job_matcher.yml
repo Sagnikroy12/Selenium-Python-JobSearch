@@ -2,8 +2,8 @@ name: Daily Job Matcher
 
 on:
   schedule:
-    # 07:00 PM Asia/Kolkata is 13:30 UTC.
-    - cron: "30 13 * * *"
+    # 07:30 PM Asia/Kolkata is 14:00 UTC.
+    - cron: "0 14 * * *"
   # push:
   #   branches:
   #     - main
