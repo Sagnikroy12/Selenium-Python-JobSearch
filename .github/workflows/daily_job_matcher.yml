@@ -4,12 +4,16 @@ on:
   schedule:
     # 07:00 AM Asia/Kolkata is 01:30 UTC.
     - cron: "30 1 * * *"
+  push:
+    branches:
+      - main
+      - dev
   workflow_dispatch:
     inputs:
       resume_pdf_path:
         description: "Resume PDF path inside the repository or mounted workspace"
         required: false
-        default: "my_resume.pdf"
+        default: "Sagnik_Roy_SDET_Resume_28-05-2026.pdf"
       job_title_target:
         description: "Job title or keyword search target"
         required: false
@@ -39,7 +43,7 @@ jobs:
 
       - name: Run scraper, ATS matcher, and email report
         env:
-          RESUME_PDF_PATH: ${{ github.event.inputs.resume_pdf_path || vars.RESUME_PDF_PATH || 'my_resume.pdf' }}
+          RESUME_PDF_PATH: ${{ github.event.inputs.resume_pdf_path || vars.RESUME_PDF_PATH || 'Sagnik_Roy_SDET_Resume_28-05-2026.pdf' }}
           JOB_TITLE_TARGET: ${{ github.event.inputs.job_title_target || vars.JOB_TITLE_TARGET || 'Automation Engineer' }}
           JOB_LOCATION_TARGET: ${{ github.event.inputs.job_location_target || vars.JOB_LOCATION_TARGET || 'Hyderabad' }}
           RECIPIENT_EMAIL: ${{ github.event.inputs.recipient_email || vars.RECIPIENT_EMAIL || 'recipient@example.com' }}
@@ -52,7 +56,7 @@ jobs:
         run: |
           docker run --rm \
             -e HEADLESS=true \
-            -e RESUME_PDF_PATH="${RESUME_PDF_PATH}" \
+            -e RESUME_PDF_PATH="/app/workspace/${RESUME_PDF_PATH}" \
             -e JOB_TITLE_TARGET="${JOB_TITLE_TARGET}" \
             -e JOB_LOCATION_TARGET="${JOB_LOCATION_TARGET}" \
             -e RECIPIENT_EMAIL="${RECIPIENT_EMAIL}" \
@@ -63,6 +67,7 @@ jobs:
             -e SMTP_PASSWORD="${SMTP_PASSWORD}" \
             -e MAIL_FROM="${MAIL_FROM}" \
             -e EMAIL_SUBJECT="${EMAIL_SUBJECT}" \
+            -v "${{ github.workspace }}:/app/workspace" \
             -v "${{ github.workspace }}/artifacts:/app/artifacts" \
             -v "${{ github.workspace }}/reports:/app/reports" \
             daily-job-matcher
