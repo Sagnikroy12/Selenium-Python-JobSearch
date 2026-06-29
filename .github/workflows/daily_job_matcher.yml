@@ -4,10 +4,10 @@ on:
   schedule:
     # 07:00 AM Asia/Kolkata is 01:30 UTC.
     - cron: "30 1 * * *"
-  push:
-    branches:
-      - main
-      - dev
+  # push:
+  #   branches:
+  #     - main
+  #     - dev
   workflow_dispatch:
     inputs:
       resume_pdf_path:
@@ -25,7 +25,7 @@ on:
       recipient_email:
         description: "Email address that receives the top 10 match report"
         required: false
-        default: "recipient@example.com"
+        default: "morphgamingstop@gmail.com"
 
 jobs:
   run-job-matcher:
@@ -46,7 +46,7 @@ jobs:
           RESUME_PDF_PATH: ${{ github.event.inputs.resume_pdf_path || vars.RESUME_PDF_PATH || 'Sagnik_Roy_SDET_Resume_28-05-2026.pdf' }}
           JOB_TITLE_TARGET: ${{ github.event.inputs.job_title_target || vars.JOB_TITLE_TARGET || 'Automation Engineer' }}
           JOB_LOCATION_TARGET: ${{ github.event.inputs.job_location_target || vars.JOB_LOCATION_TARGET || 'Hyderabad' }}
-          RECIPIENT_EMAIL: ${{ github.event.inputs.recipient_email || vars.RECIPIENT_EMAIL || 'recipient@example.com' }}
+          RECIPIENT_EMAIL: ${{ github.event.inputs.recipient_email || vars.RECIPIENT_EMAIL || 'morphgamingstop@gmail.com' }}
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
           SMTP_PORT: ${{ secrets.SMTP_PORT || '587' }}
           SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
