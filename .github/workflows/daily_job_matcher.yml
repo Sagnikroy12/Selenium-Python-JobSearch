@@ -9,7 +9,7 @@ on:
       resume_pdf_path:
         description: "Resume PDF path inside the repository or mounted workspace"
         required: false
-        default: "my_resume.pdf"
+        default: "Sagnik_Roy_SDET_Resume_28-05-2026.pdf"
       job_title_target:
         description: "Job title or keyword search target"
         required: false
@@ -21,7 +21,7 @@ on:
       recipient_email:
         description: "Email address that receives the top 10 match report"
         required: false
-        default: "recipient@example.com"
+        default: "morphgamingstop@gmail.com"
 
 jobs:
   run-job-matcher:
