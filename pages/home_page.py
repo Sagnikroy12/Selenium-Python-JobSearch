@@ -35,15 +35,15 @@ class HomePage(BasePage):
         # Direct URL mapping with pre-injected 24-hour time filter (f_TPR=r86400)
         direct_target_url = f"https://www.linkedin.com/jobs/search?keywords={encoded_title}&location={encoded_location}&f_TPR=r86400"
         
-        print(f"🚀 Injecting direct target URL: {direct_target_url}")
+        print(f"Injecting direct target URL: {direct_target_url}")
         self.open(direct_target_url)
         time.sleep(random.uniform(2.0, 4.0))
         
         # Fail-fast block checking for an authwall diversion
         if "authwall" in self.driver.current_url:
-            raise PermissionError("❌ Session Blocked: Redirected to LinkedIn Authwall.")
+            raise PermissionError("Session Blocked: Redirected to LinkedIn Authwall.")
             
-        print("🎉 Target landing page accessed successfully!")
+        print("Target landing page accessed successfully!")
         self.remove_overlays()
 
         job_items = self.driver.find_elements(By.XPATH, "//main[@id='main-content']//ul/li")
