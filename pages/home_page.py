@@ -1,4 +1,5 @@
 import time
+from pathlib import Path
 
 import requests
 from bs4 import BeautifulSoup
@@ -25,7 +26,7 @@ class HomePage(BasePage):
         # Navigation to the target search URL is handled directly in search_for_jobs to prevent early Authwall redirection on the landing page.
         pass
 
-    def search_for_jobs(self, job_title, location):
+    def search_for_jobs(self, job_title, location, output_path=None):
         import urllib.parse
         import random
         
@@ -71,7 +72,7 @@ class HomePage(BasePage):
 
             job_rows.append([str(i), job_title_text, job_link, description_text])
 
-        xlsx_path = config.artifacts_dir / "linkedin_jobs.xlsx"
+        xlsx_path = Path(output_path) if output_path else config.artifacts_dir / "linkedin_jobs.xlsx"
         saved_path = ExcelWriter.write_rows(xlsx_path, job_rows, sheet_name="LinkedIn Jobs")
         print(f"Saved job listings to {saved_path}")
         return saved_path

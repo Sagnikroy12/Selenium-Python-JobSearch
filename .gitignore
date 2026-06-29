@@ -30,6 +30,7 @@ allure-report/
 .env.*
 !.env.example
 *.local
+google-credentials.json
 
 # IDE and OS noise
 .idea/

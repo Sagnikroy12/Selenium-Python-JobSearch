@@ -2,32 +2,32 @@ name: Daily Job Matcher
 
 on:
   # schedule:
-  #   # 07:43 PM Asia/Kolkata is 14:43 UTC.
-  #   - cron: "43 14 * * *"
-  # push:
-  #   branches:
-  #     - main
-  #     - dev
+  #   # 07:00 AM Asia/Kolkata is 01:30 UTC.
+  #   - cron: "30 1 * * *"
   workflow_dispatch:
-  repository_dispatch:
-    types: [daily-trigger]
     inputs:
+      batch_mode:
+        description: "Process all subscribers from Google Sheets"
+        required: false
+        default: "false"
       resume_pdf_path:
-        description: "Resume PDF path inside the repository or mounted workspace"
+        description: "Resume PDF path (single-user mode only)"
         required: false
         default: "Sagnik_Roy_SDET_Resume_28-05-2026.pdf"
       job_title_target:
-        description: "Job title or keyword search target"
+        description: "Job title search target (single-user mode only)"
         required: false
         default: "Automation Engineer"
       job_location_target:
-        description: "Job location search target"
+        description: "Job location search target (single-user mode only)"
         required: false
         default: "Hyderabad"
       recipient_email:
-        description: "Email address that receives the top 10 match report"
+        description: "Recipient email (single-user mode only)"
         required: false
         default: "morphgamingstop@gmail.com"
+  repository_dispatch:
+    types: [daily-trigger]
 
 jobs:
   run-job-matcher:
@@ -38,28 +38,50 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Prepare output directories
-        run: mkdir -p artifacts reports
+        run: mkdir -p artifacts reports artifacts/subscribers
 
       - name: Build Docker image
         run: docker build -t daily-job-matcher .
 
+      - name: Resolve run mode
+        id: mode
+        run: |
+          BATCH_MODE="${{ inputs.batch_mode || vars.BATCH_MODE || 'false' }}"
+          echo "batch_mode=${BATCH_MODE}" >> "$GITHUB_OUTPUT"
+          echo "Running in batch mode: ${BATCH_MODE}"
+
       - name: Verify resume file exists
+        if: steps.mode.outputs.batch_mode != 'true'
         run: |
           RESUME_PDF_PATH="${{ inputs.resume_pdf_path || vars.RESUME_PDF_PATH || 'Sagnik_Roy_SDET_Resume_28-05-2026.pdf' }}"
           echo "--- Workspace root listing ---"
           ls -la "${{ github.workspace }}"
           echo "--- Looking for resume: ${RESUME_PDF_PATH} ---"
           if [ -f "${{ github.workspace }}/${RESUME_PDF_PATH}" ]; then
-            echo "✅ Resume found: ${{ github.workspace }}/${RESUME_PDF_PATH}"
+            echo "Resume found: ${{ github.workspace }}/${RESUME_PDF_PATH}"
           else
-            echo "❌ Resume NOT found at: ${{ github.workspace }}/${RESUME_PDF_PATH}"
+            echo "Resume NOT found at: ${{ github.workspace }}/${RESUME_PDF_PATH}"
             echo "Available PDF files:"
             find "${{ github.workspace }}" -maxdepth 2 -name '*.pdf' -type f 2>/dev/null || echo "  (none)"
             exit 1
           fi
 
+      - name: Write Google credentials file
+        if: steps.mode.outputs.batch_mode == 'true'
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+        run: |
+          if [ -z "${GOOGLE_CREDENTIALS}" ]; then
+            echo "GOOGLE_CREDENTIALS secret is required when BATCH_MODE=true"
+            exit 1
+          fi
+          printf '%s' "${GOOGLE_CREDENTIALS}" > "${{ github.workspace }}/google-credentials.json"
+
       - name: Run scraper, ATS matcher, and email report
         env:
+          BATCH_MODE: ${{ steps.mode.outputs.batch_mode }}
+          GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID || vars.GOOGLE_SHEET_ID }}
+          GOOGLE_SHEET_NAME: ${{ vars.GOOGLE_SHEET_NAME || 'Form Responses 1' }}
           INPUT_RESUME: ${{ inputs.resume_pdf_path }}
           VAR_RESUME: ${{ vars.RESUME_PDF_PATH }}
           INPUT_TITLE: ${{ inputs.job_title_target }}
@@ -82,19 +104,30 @@ jobs:
           FINAL_SMTP_PORT="${SMTP_PORT:-587}"
           FINAL_EMAIL_SUBJECT="${EMAIL_SUBJECT:-Daily ATS Job Match Report}"
 
+          DOCKER_ENV=(
+            -e "HEADLESS=true"
+            -e "BATCH_MODE=${BATCH_MODE}"
+            -e "GOOGLE_SHEET_ID=${GOOGLE_SHEET_ID}"
+            -e "GOOGLE_SHEET_NAME=${GOOGLE_SHEET_NAME}"
+            -e "RESUME_PDF_PATH=/app/workspace/${RESUME_PDF_PATH}"
+            -e "JOB_TITLE_TARGET=${JOB_TITLE_TARGET}"
+            -e "JOB_LOCATION_TARGET=${JOB_LOCATION_TARGET}"
+            -e "RECIPIENT_EMAIL=${RECIPIENT_EMAIL}"
+            -e "SEND_EMAIL=true"
+            -e "SMTP_HOST=${SMTP_HOST}"
+            -e "SMTP_PORT=${FINAL_SMTP_PORT}"
+            -e "SMTP_USERNAME=${SMTP_USERNAME}"
+            -e "SMTP_PASSWORD=${SMTP_PASSWORD}"
+            -e "MAIL_FROM=${MAIL_FROM}"
+            -e "EMAIL_SUBJECT=${FINAL_EMAIL_SUBJECT}"
+          )
+
+          if [ "${BATCH_MODE}" = "true" ]; then
+            DOCKER_ENV+=(-e "GOOGLE_CREDENTIALS_PATH=/app/workspace/google-credentials.json")
+          fi
+
           docker run --rm \
-            -e HEADLESS=true \
-            -e RESUME_PDF_PATH="/app/workspace/${RESUME_PDF_PATH}" \
-            -e JOB_TITLE_TARGET="${JOB_TITLE_TARGET}" \
-            -e JOB_LOCATION_TARGET="${JOB_LOCATION_TARGET}" \
-            -e RECIPIENT_EMAIL="${RECIPIENT_EMAIL}" \
-            -e SEND_EMAIL=true \
-            -e SMTP_HOST="${SMTP_HOST}" \
-            -e SMTP_PORT="${FINAL_SMTP_PORT}" \
-            -e SMTP_USERNAME="${SMTP_USERNAME}" \
-            -e SMTP_PASSWORD="${SMTP_PASSWORD}" \
-            -e MAIL_FROM="${MAIL_FROM}" \
-            -e EMAIL_SUBJECT="${FINAL_EMAIL_SUBJECT}" \
+            "${DOCKER_ENV[@]}" \
             -v "${{ github.workspace }}:/app/workspace:ro" \
             -v "${{ github.workspace }}/artifacts:/app/artifacts" \
             -v "${{ github.workspace }}/reports:/app/reports" \
@@ -105,7 +138,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: scored-linkedin-jobs
-          path: artifacts/linkedin_jobs.xlsx
+          path: |
+            artifacts/linkedin_jobs.xlsx
+            artifacts/subscribers/**
           if-no-files-found: warn
 
       - name: Upload failure screenshots
@@ -115,3 +150,7 @@ jobs:
           name: selenium-failure-screenshots
           path: reports/
           if-no-files-found: ignore
+
+      - name: Remove Google credentials file
+        if: always() && steps.mode.outputs.batch_mode == 'true'
+        run: rm -f "${{ github.workspace }}/google-credentials.json"

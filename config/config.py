@@ -37,6 +37,12 @@ class FrameworkConfig:
     job_location_target: str = os.getenv("JOB_LOCATION_TARGET", "Hyderabad")
     recipient_email: str = os.getenv("RECIPIENT_EMAIL", "recipient@example.com")
     send_email: bool = _get_bool_env("SEND_EMAIL", False)
+    batch_mode: bool = _get_bool_env("BATCH_MODE", False)
+    google_sheet_id: str = os.getenv("GOOGLE_SHEET_ID", "")
+    google_sheet_name: str = os.getenv("GOOGLE_SHEET_NAME", "Form Responses 1")
+    google_credentials_path: str = os.getenv("GOOGLE_CREDENTIALS_PATH", "")
+    google_credentials_json: str = os.getenv("GOOGLE_CREDENTIALS_JSON", "")
+    subscribers_dir: Path = Path("artifacts/subscribers")
 
 
 config = FrameworkConfig()
