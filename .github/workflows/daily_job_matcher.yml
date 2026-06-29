@@ -43,17 +43,28 @@ jobs:
 
       - name: Run scraper, ATS matcher, and email report
         env:
-          RESUME_PDF_PATH: ${{ github.event.inputs.resume_pdf_path || vars.RESUME_PDF_PATH || 'Sagnik_Roy_SDET_Resume_28-05-2026.pdf' }}
-          JOB_TITLE_TARGET: ${{ github.event.inputs.job_title_target || vars.JOB_TITLE_TARGET || 'Automation Engineer' }}
-          JOB_LOCATION_TARGET: ${{ github.event.inputs.job_location_target || vars.JOB_LOCATION_TARGET || 'Hyderabad' }}
-          RECIPIENT_EMAIL: ${{ github.event.inputs.recipient_email || vars.RECIPIENT_EMAIL || 'morphgamingstop@gmail.com' }}
+          INPUT_RESUME: ${{ inputs.resume_pdf_path }}
+          VAR_RESUME: ${{ vars.RESUME_PDF_PATH }}
+          INPUT_TITLE: ${{ inputs.job_title_target }}
+          VAR_TITLE: ${{ vars.JOB_TITLE_TARGET }}
+          INPUT_LOCATION: ${{ inputs.job_location_target }}
+          VAR_LOCATION: ${{ vars.JOB_LOCATION_TARGET }}
+          INPUT_EMAIL: ${{ inputs.recipient_email }}
+          VAR_EMAIL: ${{ vars.RECIPIENT_EMAIL }}
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
-          SMTP_PORT: ${{ secrets.SMTP_PORT || '587' }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
           SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           MAIL_FROM: ${{ secrets.MAIL_FROM }}
-          EMAIL_SUBJECT: ${{ secrets.EMAIL_SUBJECT || 'Daily ATS Job Match Report' }}
+          EMAIL_SUBJECT: ${{ secrets.EMAIL_SUBJECT }}
         run: |
+          RESUME_PDF_PATH="${INPUT_RESUME:-${VAR_RESUME:-Sagnik_Roy_SDET_Resume_28-05-2026.pdf}}"
+          JOB_TITLE_TARGET="${INPUT_TITLE:-${VAR_TITLE:-Automation Engineer}}"
+          JOB_LOCATION_TARGET="${INPUT_LOCATION:-${VAR_LOCATION:-Hyderabad}}"
+          RECIPIENT_EMAIL="${INPUT_EMAIL:-${VAR_EMAIL:-morphgamingstop@gmail.com}}"
+          FINAL_SMTP_PORT="${SMTP_PORT:-587}"
+          FINAL_EMAIL_SUBJECT="${EMAIL_SUBJECT:-Daily ATS Job Match Report}"
+
           docker run --rm \
             -e HEADLESS=true \
             -e RESUME_PDF_PATH="/app/workspace/${RESUME_PDF_PATH}" \
@@ -62,11 +73,11 @@ jobs:
             -e RECIPIENT_EMAIL="${RECIPIENT_EMAIL}" \
             -e SEND_EMAIL=true \
             -e SMTP_HOST="${SMTP_HOST}" \
-            -e SMTP_PORT="${SMTP_PORT}" \
+            -e SMTP_PORT="${FINAL_SMTP_PORT}" \
             -e SMTP_USERNAME="${SMTP_USERNAME}" \
             -e SMTP_PASSWORD="${SMTP_PASSWORD}" \
             -e MAIL_FROM="${MAIL_FROM}" \
-            -e EMAIL_SUBJECT="${EMAIL_SUBJECT}" \
+            -e EMAIL_SUBJECT="${FINAL_EMAIL_SUBJECT}" \
             -v "${{ github.workspace }}:/app/workspace" \
             -v "${{ github.workspace }}/artifacts:/app/artifacts" \
             -v "${{ github.workspace }}/reports:/app/reports" \
