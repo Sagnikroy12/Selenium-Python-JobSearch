@@ -33,6 +33,11 @@ class DriverFactory:
         chrome_options.add_experimental_option("detach", config.keep_browser_open)
         chrome_options.add_argument(f"--user-agent={config.user_agent or random.choice(DriverFactory.USER_AGENTS)}")
         chrome_options.add_argument("--disable-gpu")
+        
+        # Stealth options to mask automated browser footprint
+        chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+        chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        chrome_options.add_experimental_option('useAutomationExtension', False)
 
         if config.chrome_bin:
             chrome_options.binary_location = config.chrome_bin

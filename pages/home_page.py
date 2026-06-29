@@ -22,28 +22,29 @@ class HomePage(BasePage):
         self.locators = HomepageLocators
 
     def navigate_to_home_page(self):
-        self.open(config.base_url)
-        self.remove_sign_in_modal()
+        # Navigation to the target search URL is handled directly in search_for_jobs to prevent early Authwall redirection on the landing page.
+        pass
 
     def search_for_jobs(self, job_title, location):
-        self.type(self.locators.JOB_TITLE_DROPDOWN, job_title)
-        self.wait_for_visibility(self.locators.JOB_TITLE_OPTION)
-        self.click(self.locators.JOB_TITLE_OPTION)
-
-        self.click(self.locators.LOCATION_DROPDOWN)
-        self.type(self.locators.LOCATION_DROPDOWN, location)
-
-        try:
-            self.wait_for_visibility(self.locators.LOCATION_OPTION)
-            self.click(self.locators.LOCATION_OPTION)
-        except Exception as e:
-            print(f"Location option dropdown not visible, pressing ENTER key directly: {e}")
-            self.send_keys(Keys.ENTER)
-            self.send_keys(Keys.ENTER)
-
-        self.click(self.locators.DATE_POSTED_DROPDOWN)
-        self.click(self.locators.DATE_POSTED_OPTION)
-        self.click(self.locators.DATE_POSTED_DONE_BUTTON)
+        import urllib.parse
+        import random
+        
+        encoded_title = urllib.parse.quote(job_title)
+        encoded_location = urllib.parse.quote(location)
+        
+        # Direct URL mapping with pre-injected 24-hour time filter (f_TPR=r86400)
+        direct_target_url = f"https://www.linkedin.com/jobs/search?keywords={encoded_title}&location={encoded_location}&f_TPR=r86400"
+        
+        print(f"🚀 Injecting direct target URL: {direct_target_url}")
+        self.open(direct_target_url)
+        time.sleep(random.uniform(2.0, 4.0))
+        
+        # Fail-fast block checking for an authwall diversion
+        if "authwall" in self.driver.current_url:
+            raise PermissionError("❌ Session Blocked: Redirected to LinkedIn Authwall.")
+            
+        print("🎉 Target landing page accessed successfully!")
+        self.remove_overlays()
 
         job_items = self.driver.find_elements(By.XPATH, "//main[@id='main-content']//ul/li")
         print(f"Total jobs found: {len(job_items)}")
