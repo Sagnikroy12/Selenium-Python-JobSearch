@@ -36,6 +36,8 @@ def test_strong_skill_overlap_scores_higher_than_weak_overlap():
     )
 
     assert strong_score.ats_score > weak_score.ats_score
+    assert strong_score.semantic_match > 75.0
+    assert weak_score.semantic_match < 25.0
     assert 0.0 <= strong_score.ats_score <= 100.0
     assert 0.0 <= weak_score.ats_score <= 100.0
 

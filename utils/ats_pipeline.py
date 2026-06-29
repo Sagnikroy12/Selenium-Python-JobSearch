@@ -12,8 +12,11 @@ from pathlib import Path
 import pandas as pd
 from openpyxl import load_workbook
 from pypdf import PdfReader
-from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS, TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+from sentence_transformers import SentenceTransformer, util
+from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
+
+
+EMBEDDING_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
 
 
 ATS_SCORE_COLUMN = "ATS Score"
@@ -157,18 +160,19 @@ def normalize_text(value):
     return re.sub(r"\s+", " ", str(value).lower()).strip()
 
 
-def calculate_semantic_match(resume_text, job_description):
+def calculate_semantic_match(resume_text, job_description, resume_embedding=None):
     resume = normalize_text(resume_text)
     description = normalize_text(job_description)
     if not resume or not description:
         return 0.0
 
     try:
-        vectorizer = TfidfVectorizer(stop_words="english", ngram_range=(1, 2))
-        tfidf_matrix = vectorizer.fit_transform([resume, description])
-        score = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
-        return bounded_percentage(score * 100)
-    except ValueError:
+        if resume_embedding is None:
+            resume_embedding = EMBEDDING_MODEL.encode(resume, convert_to_tensor=True)
+        job_embedding = EMBEDDING_MODEL.encode(description, convert_to_tensor=True)
+        similarity = float(util.cos_sim(resume_embedding, job_embedding).item())
+        return bounded_percentage(similarity * 100)
+    except (ValueError, RuntimeError):
         return 0.0
 
 
@@ -176,7 +180,7 @@ def calculate_match_percentage(resume_text, job_description):
     return calculate_semantic_match(resume_text, job_description)
 
 
-def calculate_ats_score(resume_text, job_description, job_title=""):
+def calculate_ats_score(resume_text, job_description, job_title="", resume_embedding=None):
     resume = normalize_text(resume_text)
     description = normalize_text(job_description)
     title = normalize_text(job_title)
@@ -195,7 +199,11 @@ def calculate_ats_score(resume_text, job_description, job_title=""):
             recommendation="No job description available for scoring.",
         )
 
-    semantic_match = calculate_semantic_match(resume, description)
+    semantic_match = calculate_semantic_match(
+        resume,
+        description,
+        resume_embedding=resume_embedding,
+    )
     job_skills = extract_skills(description)
     resume_skills = extract_skills(resume)
     matched_skills = sorted(job_skills & resume_skills)
@@ -330,6 +338,7 @@ def score_jobs_excel(excel_path, resume_pdf_path):
         raise FileNotFoundError(f"Scraped jobs Excel file not found: {path}")
 
     resume_text = extract_resume_text(resume_pdf_path)
+    resume_embedding = EMBEDDING_MODEL.encode(normalize_text(resume_text), convert_to_tensor=True)
     df = pd.read_excel(path)
 
     if JOB_DESCRIPTION_COLUMN not in df.columns:
@@ -341,6 +350,7 @@ def score_jobs_excel(excel_path, resume_pdf_path):
             resume_text=resume_text,
             job_description=row.get(JOB_DESCRIPTION_COLUMN, ""),
             job_title=row.get(JOB_TITLE_COLUMN, ""),
+            resume_embedding=resume_embedding,
         )
         score_rows.append(score.as_columns())
 
