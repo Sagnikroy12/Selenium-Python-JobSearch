@@ -18,8 +18,7 @@ def _get_bool_env(name, default=False):
 @dataclass(frozen=True)
 class FrameworkConfig:
     base_url: str = (
-        "https://www.linkedin.com/jobs/search"
-        "?trk=guest_homepage-basic_guest_nav_menu_jobs&position=1&pageNum=0"
+        "https://www.linkedin.com/jobs/search?trk=guest_homepage-basic_guest_nav_menu_jobs&position=1&pageNum=0"
     )
     browser: str = os.getenv("BROWSER", "chrome")
     implicit_wait_seconds: int = 0
