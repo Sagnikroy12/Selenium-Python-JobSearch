@@ -42,6 +42,21 @@ jobs:
       - name: Build Docker image
         run: docker build -t daily-job-matcher .
 
+      - name: Verify resume file exists
+        run: |
+          RESUME_PDF_PATH="${{ inputs.resume_pdf_path || vars.RESUME_PDF_PATH || 'Sagnik_Roy_SDET_Resume_28-05-2026.pdf' }}"
+          echo "--- Workspace root listing ---"
+          ls -la "${{ github.workspace }}"
+          echo "--- Looking for resume: ${RESUME_PDF_PATH} ---"
+          if [ -f "${{ github.workspace }}/${RESUME_PDF_PATH}" ]; then
+            echo "✅ Resume found: ${{ github.workspace }}/${RESUME_PDF_PATH}"
+          else
+            echo "❌ Resume NOT found at: ${{ github.workspace }}/${RESUME_PDF_PATH}"
+            echo "Available PDF files:"
+            find "${{ github.workspace }}" -maxdepth 2 -name '*.pdf' -type f 2>/dev/null || echo "  (none)"
+            exit 1
+          fi
+
       - name: Run scraper, ATS matcher, and email report
         env:
           INPUT_RESUME: ${{ inputs.resume_pdf_path }}
@@ -79,7 +94,7 @@ jobs:
             -e SMTP_PASSWORD="${SMTP_PASSWORD}" \
             -e MAIL_FROM="${MAIL_FROM}" \
             -e EMAIL_SUBJECT="${FINAL_EMAIL_SUBJECT}" \
-            -v "${{ github.workspace }}:/app/workspace" \
+            -v "${{ github.workspace }}:/app/workspace:ro" \
             -v "${{ github.workspace }}/artifacts:/app/artifacts" \
             -v "${{ github.workspace }}/reports:/app/reports" \
             daily-job-matcher

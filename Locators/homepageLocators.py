@@ -16,7 +16,11 @@ class HomepageLocators:
     DISTANCE_OPTION = (By.XPATH, "//input[@id='distance-0']")
     DATE_POSTED_DROPDOWN = (
         By.XPATH,
-        "//button[@data-tracking-control-name='public_jobs_f_TPR' or contains(@aria-label, 'Date posted')]",
+        "//button["
+        "@data-tracking-control-name='public_jobs_f_TPR'"
+        " or contains(@aria-label, 'Date posted')"
+        " or contains(normalize-space(text()), 'Date posted')"
+        "]",
     )
     DATE_POSTED_OPTION = (By.XPATH, "//label[contains(normalize-space(),'Past 24 hours')]")
     DATE_POSTED_DONE_BUTTON = (
