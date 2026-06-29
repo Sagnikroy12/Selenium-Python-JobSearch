@@ -4,7 +4,7 @@ on:
   schedule:
     # 07:00 AM Asia/Kolkata is 01:30 UTC.
     # - cron: "30 1 * * *"
-    - cron: "0 12 * * *"
+    - cron: "30 12 * * *"
   # push:
   #   branches:
   #     - main
