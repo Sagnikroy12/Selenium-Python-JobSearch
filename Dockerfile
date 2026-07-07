@@ -5,16 +5,24 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     HEADLESS=true \
     BROWSER=chrome \
     CHROME_BIN=/usr/bin/chromium \
-    CHROMEDRIVER_PATH=/usr/bin/chromium-driver
+    CHROMEDRIVER_PATH=/usr/bin/chromedriver
 
 WORKDIR /app
 
+# Install chromium and necessary shared libraries
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ca-certificates \
         chromium \
         chromium-driver \
-    && ln -sf /usr/bin/chromedriver /usr/bin/chromium-driver \
+        libglib2.0-0 \
+        libnss3 \
+        libfontconfig1 \
+        libxrender1 \
+        libxext6 \
+        libx11-6 \
+        libxcursor1 \
+        libxi6 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
