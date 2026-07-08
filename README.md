@@ -2,6 +2,8 @@
 
 Selenium Page Object Model framework that searches LinkedIn jobs, scores each role against your resume with a deterministic ATS-style matcher, writes a scored Excel workbook, and can email the top matches on a schedule.
 
+This project is licensed under the [MIT License](LICENSE).
+
 ## Quick Start
 
 ```bash
