@@ -2,8 +2,12 @@ import json
 import os
 import subprocess
 import time
+import sys
 from datetime import datetime
 from pathlib import Path
+
+# Add project root to sys.path so it can find the 'utils' package when run as a script
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import gspread
 from google.oauth2 import service_account
@@ -85,7 +89,14 @@ def main():
         email = user.get("email", "")
         job_title = user.get("job_title", "Automation Engineer")
         location = user.get("location", "Hyderabad")
-        file_id = user.get("gdrive_file_id", "")
+        file_id_raw = user.get("gdrive_file_id", "")
+        # Robustly extract just the file ID if a full URL was provided
+        import re
+        file_id = file_id_raw
+        if "drive.google.com" in file_id_raw:
+            match = re.search(r"[-\w]{25,}", file_id_raw)
+            if match:
+                file_id = match.group(0)
 
         print(f"\n{'=' * 50}")
         print(f"Processing: {user.get('name', 'Unknown')} ({email})")
