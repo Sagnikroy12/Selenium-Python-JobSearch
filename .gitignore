@@ -39,3 +39,6 @@ Thumbs.db
 
 # Project scratch files
 jobs.txt
+*.pdf
+workspace_tmp/
+

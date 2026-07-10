@@ -1,33 +1,9 @@
 name: Daily Job Matcher
 
 on:
-  # schedule:
-  #   # 07:43 PM Asia/Kolkata is 14:43 UTC.
-  #   - cron: "43 14 * * *"
-  # push:
-  #   branches:
-  #     - main
-  #     - dev
-  workflow_dispatch:
   repository_dispatch:
-    types: [daily-trigger]
-    inputs:
-      resume_pdf_path:
-        description: "Resume PDF path inside the repository or mounted workspace"
-        required: false
-        default: "Sagnik_Roy_SDET_Resume_28-05-2026.pdf"
-      job_title_target:
-        description: "Job title or keyword search target"
-        required: false
-        default: "Automation Engineer"
-      job_location_target:
-        description: "Job location search target"
-        required: false
-        default: "Hyderabad"
-      recipient_email:
-        description: "Email address that receives the top 10 match report"
-        required: false
-        default: "morphgamingstop@gmail.com"
+    types: [run-for-users]   # triggered by Apps Script scheduler
+  workflow_dispatch:          # keep for manual testing only
 
 jobs:
   run-job-matcher:
@@ -40,78 +16,51 @@ jobs:
       - name: Prepare output directories
         run: mkdir -p artifacts reports
 
+      - name: Set up Python for orchestrator
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install orchestrator dependencies
+        run: |
+          pip install gspread google-api-python-client google-auth pandas openpyxl
+
+      - name: Decode Google service account key
+        env:
+          GDRIVE_SA_JSON: ${{ secrets.GDRIVE_SERVICE_ACCOUNT_JSON }}
+        run: echo "$GDRIVE_SA_JSON" | base64 -d > /tmp/gdrive_sa.json
+
       - name: Build Docker image
         run: docker build -t daily-job-matcher .
 
-      - name: Verify resume file exists
-        run: |
-          RESUME_PDF_PATH="${{ inputs.resume_pdf_path || vars.RESUME_PDF_PATH || 'Sagnik_Roy_SDET_Resume_28-05-2026.pdf' }}"
-          echo "--- Workspace root listing ---"
-          ls -la "${{ github.workspace }}"
-          echo "--- Looking for resume: ${RESUME_PDF_PATH} ---"
-          if [ -f "${{ github.workspace }}/${RESUME_PDF_PATH}" ]; then
-            echo "✅ Resume found: ${{ github.workspace }}/${RESUME_PDF_PATH}"
-          else
-            echo "❌ Resume NOT found at: ${{ github.workspace }}/${RESUME_PDF_PATH}"
-            echo "Available PDF files:"
-            find "${{ github.workspace }}" -maxdepth 2 -name '*.pdf' -type f 2>/dev/null || echo "  (none)"
-            exit 1
-          fi
-
-      - name: Run scraper, ATS matcher, and email report
+      - name: Run pipeline for dispatched users
         env:
-          INPUT_RESUME: ${{ inputs.resume_pdf_path }}
-          VAR_RESUME: ${{ vars.RESUME_PDF_PATH }}
-          INPUT_TITLE: ${{ inputs.job_title_target }}
-          VAR_TITLE: ${{ vars.JOB_TITLE_TARGET }}
-          INPUT_LOCATION: ${{ inputs.job_location_target }}
-          VAR_LOCATION: ${{ vars.JOB_LOCATION_TARGET }}
-          INPUT_EMAIL: ${{ inputs.recipient_email }}
-          VAR_EMAIL: ${{ vars.RECIPIENT_EMAIL }}
+          GDRIVE_SA_KEY_PATH: /tmp/gdrive_sa.json
+          GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
           SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           MAIL_FROM: ${{ secrets.MAIL_FROM }}
-          EMAIL_SUBJECT: ${{ secrets.EMAIL_SUBJECT }}
-        run: |
-          RESUME_PDF_PATH="${INPUT_RESUME:-${VAR_RESUME:-Sagnik_Roy_SDET_Resume_28-05-2026.pdf}}"
-          JOB_TITLE_TARGET="${INPUT_TITLE:-${VAR_TITLE:-Automation Engineer}}"
-          JOB_LOCATION_TARGET="${INPUT_LOCATION:-${VAR_LOCATION:-Hyderabad}}"
-          RECIPIENT_EMAIL="${INPUT_EMAIL:-${VAR_EMAIL:-morphgamingstop@gmail.com}}"
-          FINAL_SMTP_PORT="${SMTP_PORT:-587}"
-          FINAL_EMAIL_SUBJECT="${EMAIL_SUBJECT:-Daily ATS Job Match Report}"
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          # Users payload from Apps Script (JSON string)
+          USERS_PAYLOAD: ${{ toJson(github.event.client_payload.users) }}
+          TIME_SLOT: ${{ github.event.client_payload.time_slot }}
+        run: python scripts/run_for_users.py
 
-          docker run --rm \
-            -e HEADLESS=true \
-            -e RESUME_PDF_PATH="/app/workspace/${RESUME_PDF_PATH}" \
-            -e JOB_TITLE_TARGET="${JOB_TITLE_TARGET}" \
-            -e JOB_LOCATION_TARGET="${JOB_LOCATION_TARGET}" \
-            -e RECIPIENT_EMAIL="${RECIPIENT_EMAIL}" \
-            -e SEND_EMAIL=true \
-            -e SMTP_HOST="${SMTP_HOST}" \
-            -e SMTP_PORT="${FINAL_SMTP_PORT}" \
-            -e SMTP_USERNAME="${SMTP_USERNAME}" \
-            -e SMTP_PASSWORD="${SMTP_PASSWORD}" \
-            -e MAIL_FROM="${MAIL_FROM}" \
-            -e EMAIL_SUBJECT="${FINAL_EMAIL_SUBJECT}" \
-            -v "${{ github.workspace }}:/app/workspace:ro" \
-            -v "${{ github.workspace }}/artifacts:/app/artifacts" \
-            -v "${{ github.workspace }}/reports:/app/reports" \
-            daily-job-matcher
-
-      - name: Upload scored Excel report
+      - name: Upload all scored reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: scored-linkedin-jobs
-          path: artifacts/linkedin_jobs.xlsx
+          name: job-reports-slot-${{ github.event.client_payload.time_slot }}
+          path: artifacts/*_jobs.xlsx
           if-no-files-found: warn
 
       - name: Upload failure screenshots
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: selenium-failure-screenshots
+          name: failure-screenshots
           path: reports/
           if-no-files-found: ignore
