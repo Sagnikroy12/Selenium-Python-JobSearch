@@ -110,9 +110,9 @@ def main():
 
             download_resume(file_id, str(resume_path), sa_key_path)
 
-            # Build docker run list
             cmd = [
                 "docker", "run", "--rm",
+                "--shm-size=2gb",          # Chromium needs >64MB /dev/shm or it segfaults
                 "-e", "HEADLESS=true",
                 "-e", f"RESUME_PDF_PATH=/app/workspace/{slug}_resume.pdf",
                 "-e", f"JOB_TITLE_TARGET={job_title}",
@@ -130,7 +130,8 @@ def main():
                 "daily-job-matcher"
             ]
 
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=600,
+                                    encoding='utf-8', errors='replace')
 
             if result.returncode == 0:
                 # Rename output artifact to user-specific filename

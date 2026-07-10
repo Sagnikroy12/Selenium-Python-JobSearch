@@ -1,9 +1,16 @@
 name: Daily Job Matcher
 
 on:
-  repository_dispatch:
-    types: [run-for-users]   # triggered by Apps Script scheduler
-  workflow_dispatch:          # keep for manual testing only
+  workflow_dispatch:
+    inputs:
+      users_payload:
+        description: 'JSON string payload of users to process'
+        required: true
+        type: string
+      time_slot:
+        description: 'The time slot being processed'
+        required: false
+        type: string
 
 jobs:
   run-job-matcher:
@@ -45,15 +52,15 @@ jobs:
           MAIL_FROM: ${{ secrets.MAIL_FROM }}
           ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
           # Users payload from Apps Script (JSON string)
-          USERS_PAYLOAD: ${{ toJson(github.event.client_payload.users) }}
-          TIME_SLOT: ${{ github.event.client_payload.time_slot }}
+          USERS_PAYLOAD: ${{ github.event.inputs.users_payload }}
+          TIME_SLOT: ${{ github.event.inputs.time_slot }}
         run: python scripts/run_for_users.py
 
       - name: Upload all scored reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: job-reports-slot-${{ github.event.client_payload.time_slot }}
+          name: job-reports-slot-${{ github.event.inputs.time_slot }}
           path: artifacts/*_jobs.xlsx
           if-no-files-found: warn
 
