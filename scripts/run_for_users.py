@@ -159,10 +159,11 @@ def main():
             print(f"Sleeping {sleep_secs}s before next user...")
             time.sleep(sleep_secs)
 
-    if admin_email:
-        send_admin_summary(results, admin_email)
-    else:
-        print("ADMIN_EMAIL not set. Skipping admin summary email.")
+    # if admin_email:
+    #     send_admin_summary(results, admin_email)
+    # else:
+    #     print("ADMIN_EMAIL not set. Skipping admin summary email.")
+    print("Batch processing complete.")
 
 
 

@@ -32,7 +32,8 @@ function onFormSubmit(e) {
   const location     = r[3].getResponse();
   const resumeFiles  = r[4].getResponse();   // array of Drive URLs
   const planChoice   = r[5].getResponse();
-  const timeChoice   = r[6].getResponse();   // "7:00 AM IST"
+  const _termsAck    = r[6].getResponse();   // "I agree to Terms" checkbox — skip
+  const timeChoice   = r[7].getResponse();   // "7:00 AM IST"
 
   const resumeFileId = extractDriveFileId(resumeFiles[0]);
   const planKey      = parsePlan(planChoice);
@@ -199,16 +200,15 @@ function doGet(e) {
 // ── 4. The Reliable Scheduler ────────────────────────────────────────────
 // This function runs EVERY HOUR via a time-based trigger.
 function dispatchForTimeSlot() {
-  const istOffset = 5.5 * 60 * 60 * 1000;  // IST = UTC+5:30
+  const istOffset = 5.5 * 60 * 60 * 1000;
   const nowIST    = new Date(Date.now() + istOffset);
-  const currentHr = nowIST.getHours();      // 0-23
+  const currentHr = nowIST.getHours();
 
   const sheet   = SpreadsheetApp.openById(PROPS.getProperty("SHEET_ID"))
                                  .getSheetByName("Users");
   const records = sheet.getDataRange().getValues();
   const headers = records[0];
 
-  // Column indexes (0-based)
   const COL = {
     email:     headers.indexOf("email"),
     jobTitle:  headers.indexOf("job_title"),
@@ -225,6 +225,7 @@ function dispatchForTimeSlot() {
     const status = row[COL.status];
     const pTime  = parseInt(row[COL.prefTime]);
 
+    // Added: Allow 'active' or 'free_grant' status
     if ((status === "active" || status === "free_grant") && pTime === currentHr) {
       usersForSlot.push({
         name:          row[COL.name],
@@ -237,16 +238,10 @@ function dispatchForTimeSlot() {
     }
   }
 
-  if (usersForSlot.length === 0) {
-    console.log(`No active users for ${currentHr}:00 IST`);
-    return;
-  }
+  if (usersForSlot.length === 0) return;
 
-  console.log(`Dispatching ${usersForSlot.length} users for ${currentHr}:00 IST`);
-
-  // Call GitHub repository_dispatch API
   const pat    = PROPS.getProperty("GITHUB_PAT");
-  const repo   = PROPS.getProperty("GITHUB_REPO");  // "Sagnikroy12/Selenium-Python-JobSearch"
+  const repo   = PROPS.getProperty("GITHUB_REPO");
 
   UrlFetchApp.fetch(`https://api.github.com/repos/${repo}/dispatches`, {
     method: "post",
@@ -257,11 +252,12 @@ function dispatchForTimeSlot() {
     },
     payload: JSON.stringify({
       event_type:     "run-for-users",
-      client_payload: { users: usersForSlot, time_slot: currentHr },
+      client_payload: {
+        users: usersForSlot,
+        time_slot: currentHr.toString()
+      }
     }),
   });
-
-  console.log(`GitHub dispatch sent for ${usersForSlot.length} users`);
 }
 
 function installHourlyTrigger() {

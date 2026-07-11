@@ -5,12 +5,14 @@ on:
     inputs:
       users_payload:
         description: 'JSON string payload of users to process'
-        required: true
+        required: false
         type: string
       time_slot:
         description: 'The time slot being processed'
         required: false
         type: string
+  repository_dispatch:
+    types: [run-for-users]
 
 jobs:
   run-job-matcher:
@@ -51,9 +53,9 @@ jobs:
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           MAIL_FROM: ${{ secrets.MAIL_FROM }}
           ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
-          # Users payload from Apps Script (JSON string)
-          USERS_PAYLOAD: ${{ github.event.inputs.users_payload }}
-          TIME_SLOT: ${{ github.event.inputs.time_slot }}
+          # Handle both manual (inputs) and automated (client_payload) triggers
+          USERS_PAYLOAD: ${{ github.event.inputs.users_payload || toJson(github.event.client_payload.users) }}
+          TIME_SLOT: ${{ github.event.inputs.time_slot || github.event.client_payload.time_slot }}
         run: python scripts/run_for_users.py
 
       - name: Upload all scored reports
