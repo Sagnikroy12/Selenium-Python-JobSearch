@@ -37,7 +37,7 @@ function onFormSubmit(e) {
 
   const resumeFileId = extractDriveFileId(resumeFiles[0]);
   const planKey      = parsePlan(planChoice);
-  const preferredHr  = parseInt(timeChoice.split(":")[0]);  // "7:00 AM IST" → 7
+  const preferredHr  = parseTimeToHour24(timeChoice);  // "02:00 PM IST" → 14
 
   // Trial eligibility check
   const existingRows   = sheet.getLastRow() - 1;
@@ -299,6 +299,16 @@ function parsePlan(choice) {
   if (choice.includes("Weekly"))  return "weekly";
   if (choice.includes("Monthly")) return "monthly";
   return "weekly";
+}
+
+function parseTimeToHour24(timeStr) {
+  // Handles strings like "7:00 AM IST", "02:00 PM IST", "12:00 AM IST"
+  const isPM = timeStr.toUpperCase().includes("PM");
+  const isAM = timeStr.toUpperCase().includes("AM");
+  const hr   = parseInt(timeStr.split(":")[0]);  // e.g. "02" → 2
+  if (isPM && hr !== 12) return hr + 12;          // 2 PM → 14
+  if (isAM && hr === 12) return 0;                // 12 AM → 0 (midnight)
+  return hr;                                      // 7 AM → 7, 12 PM → 12
 }
 
 // ── 6. Email Stub Functions ──────────────────────────────────────────────
