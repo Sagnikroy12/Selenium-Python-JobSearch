@@ -22,9 +22,8 @@ const PLAN_DAYS   = { trial: 14, weekly: 7, monthly: 30 };
 
 // ── 1. Form Submission Handler ───────────────────────────────────────────
 function onFormSubmit(e) {
-  const sheet = SpreadsheetApp.openById(PROPS.getProperty("SHEET_ID"))
-                               .getSheetByName("Users");
-  const r = e.response.getItemResponses();
+  const sheet = getOrCreateUsersSheet();   // auto-creates "Users" tab if missing
+  const r     = e.response.getItemResponses();
 
   const name         = r[0].getResponse();
   const email        = r[1].getResponse();
@@ -37,12 +36,12 @@ function onFormSubmit(e) {
 
   const resumeFileId = extractDriveFileId(resumeFiles[0]);
   const planKey      = parsePlan(planChoice);
-  const preferredHr  = parseTimeToHour24(timeChoice);  // "02:00 PM IST" → 14
+  const preferredHr  = parseTimeToHour24(timeChoice);  // "03:00 PM IST" → 15
 
-  // Trial eligibility check
-  const existingRows   = sheet.getLastRow() - 1;
-  const trialEligible  = existingRows < TRIAL_LIMIT;
-  const effectivePlan  = (planKey === "trial" && !trialEligible) ? "weekly" : planKey;
+  // Trial eligibility check (count data rows in Users sheet, not form response sheet)
+  const existingRows  = sheet.getLastRow() - 1;   // subtract header row
+  const trialEligible = existingRows < TRIAL_LIMIT;
+  const effectivePlan = (planKey === "trial" && !trialEligible) ? "weekly" : planKey;
 
   const startDate = new Date();
   const endDate   = new Date();
@@ -56,21 +55,19 @@ function onFormSubmit(e) {
     // Update preferences only — DO NOT reset subscription
     sheet.getRange(existingRow, 4).setValue(jobTitle);
     sheet.getRange(existingRow, 5).setValue(location);
+    sheet.getRange(existingRow, 6).setValue(resumeFileId || sheet.getRange(existingRow, 6).getValue());
     sheet.getRange(existingRow, 18).setValue(preferredHr);
-    if (resumeFileId) sheet.getRange(existingRow, 6).setValue(resumeFileId);
     sendUpdateConfirmationEmail(name, email, jobTitle, location, preferredHr);
     return;
   }
 
   // ── New user ──────────────────────────────────────────────────────────
-  // Create Razorpay payment link (₹0 for trial = skip Razorpay, set active immediately)
-  let paymentUrl = "";
-  let paymentLinkId = "";
+  let paymentUrl     = "";
+  let paymentLinkId  = "";
   let paymentVerified = false;
 
   if (PLAN_PRICES[effectivePlan] === 0) {
-    // Free trial — no payment needed
-    paymentVerified = true;
+    paymentVerified = true;   // Free trial — no payment needed
   } else {
     const rzResult = createRazorpayPaymentLink(
       PLAN_PRICES[effectivePlan], effectivePlan, name, email
@@ -80,30 +77,49 @@ function onFormSubmit(e) {
   }
 
   sheet.appendRow([
-    new Date(),        // timestamp
-    name,              // name
-    email,             // email
-    jobTitle,          // job_title
-    location,          // location
-    resumeFileId,      // gdrive_file_id
-    effectivePlan,     // plan
-    startDate,         // plan_start_date
-    endDate,           // plan_end_date
-    paymentVerified,   // payment_verified
-    "",                // subscription_status (formula-driven)
-    trialEligible,     // trial_eligible
-    false,             // free_grant
-    "",                // free_grant_until
-    0,                 // run_count
-    "",                // last_run_date
-    editLink,          // edit_link
-    preferredHr,       // preferred_time
-    paymentLinkId,     // razorpay_payment_link_id
+    new Date(),        // col 1:  timestamp
+    name,              // col 2:  name
+    email,             // col 3:  email
+    jobTitle,          // col 4:  job_title
+    location,          // col 5:  location
+    resumeFileId,      // col 6:  gdrive_file_id
+    effectivePlan,     // col 7:  plan
+    startDate,         // col 8:  plan_start_date
+    endDate,           // col 9:  plan_end_date
+    paymentVerified,   // col 10: payment_verified
+    paymentVerified ? "active" : "pending",  // col 11: subscription_status
+    trialEligible,     // col 12: trial_eligible
+    false,             // col 13: free_grant
+    "",                // col 14: free_grant_until
+    0,                 // col 15: run_count
+    "",                // col 16: last_run_date
+    editLink,          // col 17: edit_link
+    preferredHr,       // col 18: preferred_time
+    paymentLinkId,     // col 19: razorpay_payment_link_id
   ]);
 
   sendWelcomeEmail(name, email, effectivePlan, trialEligible, endDate,
                    editLink, paymentUrl, preferredHr);
 }
+
+// Creates the "Users" sheet with the correct header row if it doesn't exist yet.
+function getOrCreateUsersSheet() {
+  const ss    = SpreadsheetApp.openById(PROPS.getProperty("SHEET_ID"));
+  let   sheet = ss.getSheetByName("Users");
+  if (!sheet) {
+    sheet = ss.insertSheet("Users");
+    sheet.appendRow([
+      "timestamp", "name", "email", "job_title", "location",
+      "gdrive_file_id", "plan", "plan_start_date", "plan_end_date",
+      "payment_verified", "subscription_status", "trial_eligible",
+      "free_grant", "free_grant_until", "run_count", "last_run_date",
+      "edit_link", "preferred_time", "razorpay_payment_link_id",
+    ]);
+    console.log("✅ Created 'Users' sheet with headers");
+  }
+  return sheet;
+}
+
 
 // ── 2. Razorpay API Integration ──────────────────────────────────────────
 function createRazorpayPaymentLink(amount, plan, name, email) {
@@ -200,50 +216,82 @@ function doGet(e) {
 // ── 4. The Reliable Scheduler ────────────────────────────────────────────
 // This function runs EVERY HOUR via a time-based trigger.
 function dispatchForTimeSlot() {
-  const istOffset = 5.5 * 60 * 60 * 1000;
-  const nowIST    = new Date(Date.now() + istOffset);
-  const currentHr = nowIST.getHours();
+  // Use Utilities.formatDate to reliably get the IST hour (0-23) regardless of project timezone
+  const currentHr = parseInt(Utilities.formatDate(new Date(), "Asia/Kolkata", "H"));
 
-  const sheet   = SpreadsheetApp.openById(PROPS.getProperty("SHEET_ID"))
-                                 .getSheetByName("Users");
+  const ss    = SpreadsheetApp.openById(PROPS.getProperty("SHEET_ID"));
+  // Prefer a dedicated "Users" tab; fall back to the first sheet (form response sheet)
+  const sheet = ss.getSheetByName("Users") || ss.getSheets()[0];
+
+  if (!sheet) {
+    console.log("ERROR: No sheet found. Check SHEET_ID script property.");
+    return;
+  }
+
   const records = sheet.getDataRange().getValues();
   const headers = records[0];
 
+  // Flexible column lookup — supports both "Users" short names and form response full names
+  function col(...candidates) {
+    for (const name of candidates) {
+      const idx = headers.findIndex(h => h.toString().trim() === name.trim());
+      if (idx !== -1) return idx;
+    }
+    return -1;
+  }
+
   const COL = {
-    email:     headers.indexOf("email"),
-    jobTitle:  headers.indexOf("job_title"),
-    location:  headers.indexOf("location"),
-    fileId:    headers.indexOf("gdrive_file_id"),
-    status:    headers.indexOf("subscription_status"),
-    prefTime:  headers.indexOf("preferred_time"),
-    name:      headers.indexOf("name"),
+    name:     col("name",            "Full Name"),
+    email:    col("email",           "Recipient mail Address"),
+    jobTitle: col("job_title",       "Job Title / Keywords"),
+    location: col("location",        "Preferred Location"),
+    fileId:   col("gdrive_file_id",  "Upload Your Resume (PDF only)"),
+    status:   col("subscription_status"),
+    prefTime: col("preferred_time",  "Preferred Report Time (IST)"),
   };
 
-  const usersForSlot = [];
-  for (let i = 1; i < records.length; i++) {
-    const row    = records[i];
-    const status = row[COL.status];
-    const pTime  = parseInt(row[COL.prefTime]);
+  console.log(`Hour: ${currentHr} IST | Columns: ${JSON.stringify(COL)}`);
 
-    // Added: Allow 'active' or 'free_grant' status
+  // Deduplicate by email — keep only the LATEST row per user
+  const latestRowByEmail = {};
+  for (let i = 1; i < records.length; i++) {
+    const emailVal = (records[i][COL.email] || "").toString().trim();
+    if (emailVal) latestRowByEmail[emailVal] = i;  // overwrites with later rows
+  }
+
+  const usersForSlot = [];
+  for (const emailVal of Object.keys(latestRowByEmail)) {
+    const row    = records[latestRowByEmail[emailVal]];
+    const status = row[COL.status];
+
+    // Parse time — handles both integer (Users sheet) and "HH:MM AM/PM IST" string (form sheet)
+    const rawTime = row[COL.prefTime];
+    const pTime   = (typeof rawTime === "number")
+                    ? rawTime
+                    : parseTimeToHour24(rawTime.toString());
+
+    console.log(`  ${emailVal} → status="${status}" pTime=${pTime}`);
+
     if ((status === "active" || status === "free_grant") && pTime === currentHr) {
+      const rawFile = (row[COL.fileId] || "").toString();
       usersForSlot.push({
-        name:          row[COL.name],
-        email:         row[COL.email],
-        job_title:     row[COL.jobTitle],
-        location:      row[COL.location],
-        gdrive_file_id: row[COL.fileId],
-        slug:          row[COL.name].toString().toLowerCase().replace(/\s+/g, "_"),
+        name:           row[COL.name],
+        email:          emailVal,
+        job_title:      row[COL.jobTitle],
+        location:       row[COL.location],
+        gdrive_file_id: extractDriveFileId(rawFile),
+        slug:           row[COL.name].toString().toLowerCase().replace(/\s+/g, "_"),
       });
     }
   }
 
+  console.log(`Dispatching ${usersForSlot.length} user(s) for hour ${currentHr}`);
   if (usersForSlot.length === 0) return;
 
-  const pat    = PROPS.getProperty("GITHUB_PAT");
-  const repo   = PROPS.getProperty("GITHUB_REPO");
+  const pat  = PROPS.getProperty("GITHUB_PAT");
+  const repo = PROPS.getProperty("GITHUB_REPO");
 
-  UrlFetchApp.fetch(`https://api.github.com/repos/${repo}/dispatches`, {
+  const resp = UrlFetchApp.fetch(`https://api.github.com/repos/${repo}/dispatches`, {
     method: "post",
     headers: {
       "Authorization": `token ${pat}`,
@@ -253,12 +301,16 @@ function dispatchForTimeSlot() {
     payload: JSON.stringify({
       event_type:     "run-for-users",
       client_payload: {
-        users: usersForSlot,
-        time_slot: currentHr.toString()
+        users:     usersForSlot,
+        time_slot: currentHr.toString(),
       }
     }),
+    muteHttpExceptions: true,
   });
+
+  console.log(`GitHub API response: HTTP ${resp.getResponseCode()}`);
 }
+
 
 function installHourlyTrigger() {
   // Delete any existing trigger with same name first
