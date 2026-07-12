@@ -354,10 +354,13 @@ function parsePlan(choice) {
 }
 
 function parseTimeToHour24(timeStr) {
+  if (!timeStr) return 7; // default to 7 AM if missing or empty
+  const str = String(timeStr).toUpperCase();
   // Handles strings like "7:00 AM IST", "02:00 PM IST", "12:00 AM IST"
-  const isPM = timeStr.toUpperCase().includes("PM");
-  const isAM = timeStr.toUpperCase().includes("AM");
-  const hr   = parseInt(timeStr.split(":")[0]);  // e.g. "02" → 2
+  const isPM = str.includes("PM");
+  const isAM = str.includes("AM");
+  const hr   = parseInt(str.split(":")[0], 10);  // e.g. "02" → 2
+  if (isNaN(hr)) return 7; // Fallback if parsing fails
   if (isPM && hr !== 12) return hr + 12;          // 2 PM → 14
   if (isAM && hr === 12) return 0;                // 12 AM → 0 (midnight)
   return hr;                                      // 7 AM → 7, 12 PM → 12
