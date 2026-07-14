@@ -32,7 +32,7 @@ class FrameworkConfig:
     chrome_bin: str = os.getenv("CHROME_BIN", "")
     chromedriver_path: str = os.getenv("CHROMEDRIVER_PATH", "")
     user_agent: str = os.getenv("USER_AGENT", "")
-    resume_pdf_path: Path = Path(os.getenv("RESUME_PDF_PATH", "Sagnik_Roy_SDET_Resume_28-05-2026.pdf"))
+    resume_pdf_path: Path = Path(os.getenv("RESUME_PDF_PATH", "Sagnik_Roy_SDET_Resume_14-07-2026.pdf"))
     job_title_target: str = os.getenv("JOB_TITLE_TARGET", "Automation Engineer")
     job_location_target: str = os.getenv("JOB_LOCATION_TARGET", "Hyderabad")
     recipient_email: str = os.getenv("RECIPIENT_EMAIL", "recipient@example.com")

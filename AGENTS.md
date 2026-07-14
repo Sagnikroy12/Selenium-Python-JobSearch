@@ -86,9 +86,9 @@ docker build -t daily-job-matcher .
 ```bash
 docker run --rm \
   -e HEADLESS=true \
-  -e RESUME_PDF_PATH="Sagnik_Roy_SDET_Resume_28-05-2026.pdf" \
+  -e RESUME_PDF_PATH="Sagnik_Roy_SDET_Resume_14-07-2026.pdf" \
   -v "$(pwd)/artifacts:/app/artifacts" \
-  -v "$(pwd)/Sagnik_Roy_SDET_Resume_28-05-2026.pdf:/app/Sagnik_Roy_SDET_Resume_28-05-2026.pdf" \
+  -v "$(pwd)/Sagnik_Roy_SDET_Resume_14-07-2026.pdf:/app/Sagnik_Roy_SDET_Resume_14-07-2026.pdf" \
   daily-job-matcher
 ```
 

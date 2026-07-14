@@ -15,7 +15,7 @@ on:
       resume_pdf_path:
         description: "Resume PDF path inside the repository or mounted workspace"
         required: false
-        default: "Sagnik_Roy_SDET_Resume_28-05-2026.pdf"
+        default: "Sagnik_Roy_SDET_Resume_14-07-2026.pdf"
       job_title_target:
         description: "Job title or keyword search target"
         required: false
@@ -45,7 +45,7 @@ jobs:
 
       - name: Verify resume file exists
         run: |
-          RESUME_PDF_PATH="${{ inputs.resume_pdf_path || vars.RESUME_PDF_PATH || 'Sagnik_Roy_SDET_Resume_28-05-2026.pdf' }}"
+          RESUME_PDF_PATH="${{ inputs.resume_pdf_path || vars.RESUME_PDF_PATH || 'Sagnik_Roy_SDET_Resume_14-07-2026.pdf' }}"
           echo "--- Workspace root listing ---"
           ls -la "${{ github.workspace }}"
           echo "--- Looking for resume: ${RESUME_PDF_PATH} ---"
@@ -75,7 +75,7 @@ jobs:
           MAIL_FROM: ${{ secrets.MAIL_FROM }}
           EMAIL_SUBJECT: ${{ secrets.EMAIL_SUBJECT }}
         run: |
-          RESUME_PDF_PATH="${INPUT_RESUME:-${VAR_RESUME:-Sagnik_Roy_SDET_Resume_28-05-2026.pdf}}"
+          RESUME_PDF_PATH="${INPUT_RESUME:-${VAR_RESUME:-Sagnik_Roy_SDET_Resume_14-07-2026.pdf}}"
           JOB_TITLE_TARGET="${INPUT_TITLE:-${VAR_TITLE:-Automation Engineer}}"
           JOB_LOCATION_TARGET="${INPUT_LOCATION:-${VAR_LOCATION:-Hyderabad}}"
           RECIPIENT_EMAIL="${INPUT_EMAIL:-${VAR_EMAIL:-morphgamingstop@gmail.com}}"
