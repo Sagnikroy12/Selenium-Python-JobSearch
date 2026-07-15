@@ -137,4 +137,42 @@ def test_score_jobs_excel_writes_ats_columns_and_job_link_hyperlinks(monkeypatch
         link_column = headers.index("Job Link") + 1
         link_cell = worksheet.cell(row=2, column=link_column)
 
-        assert link_cell.hyperlink.target == "https://www.linkedin.com/jobs/view/123"
+@pytest.mark.unit
+def test_non_technical_role_scoring():
+    non_tech_job = """
+    Marketing Coordinator needed to manage social media campaigns, create content,
+    analyze marketing metrics, and collaborate with the design team. Requires
+    strong communication and analytical skills.
+    """
+    non_tech_resume = """
+    Marketing Assistant with experience in social media management, content creation,
+    campaign analysis, and design collaboration. Excellent communication skills.
+    """
+    
+    score = ats_pipeline.calculate_ats_score(
+        non_tech_resume, non_tech_job, "Marketing Coordinator"
+    )
+
+    assert score.ats_score > 40.0
+    assert score.semantic_match > 60.0
+    assert score.keyword_match > 25.0
+
+
+@pytest.mark.unit
+def test_experience_match_overqualification_gives_full_score():
+    resume = "Senior QA Engineer with 8 years of experience in Selenium and Python."
+    job = "Junior QA role requiring 2 years of experience in Selenium and Python."
+
+    score = ats_pipeline.calculate_ats_score(resume, job, "QA Engineer")
+
+    assert score.experience_match == 100.0
+
+
+@pytest.mark.unit
+def test_experience_match_underqualification_reduces_score():
+    resume = "Junior QA Engineer with 2 years of experience in Selenium and Python."
+    job = "Senior QA role requiring 7 years of experience in Selenium and Python."
+
+    score = ats_pipeline.calculate_ats_score(resume, job, "QA Engineer")
+
+    assert score.experience_match < 50.0

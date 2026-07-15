@@ -37,6 +37,8 @@ class FrameworkConfig:
     job_location_target: str = os.getenv("JOB_LOCATION_TARGET", "Hyderabad")
     recipient_email: str = os.getenv("RECIPIENT_EMAIL", "recipient@example.com")
     send_email: bool = _get_bool_env("SEND_EMAIL", False)
+    user_experience_years: float = float(os.getenv("USER_EXPERIENCE_YEARS", 0.0))
+
 
 
 config = FrameworkConfig()
