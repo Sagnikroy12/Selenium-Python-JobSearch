@@ -12,6 +12,7 @@ from pathlib import Path
 import pandas as pd
 from openpyxl import load_workbook
 from pypdf import PdfReader
+from config.config import config
 from sentence_transformers import SentenceTransformer, util
 from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
 
@@ -223,6 +224,7 @@ def calculate_ats_score(resume_text, job_description, job_title="", resume_embed
         + education_bonus * 0.05
     )
 
+
     ats_score = bounded_percentage(weighted_score)
     return ATSScore(
         ats_score=ats_score,
@@ -243,7 +245,7 @@ def extract_skills(text):
     return {skill for skill in TECH_SKILLS if skill in normalized}
 
 
-def calculate_keyword_match(resume_text, job_description, top_n=18):
+def calculate_keyword_match(resume_text, job_description, top_n=25):
     keywords = extract_weighted_keywords(job_description, top_n=top_n)
     if not keywords:
         return 0.0
@@ -253,7 +255,7 @@ def calculate_keyword_match(resume_text, job_description, top_n=18):
     return percentage(matched_weight, total_weight)
 
 
-def extract_weighted_keywords(text, top_n=18):
+def extract_weighted_keywords(text, top_n=25):
     tokens = [
         token
         for token in WORD_PATTERN.findall(normalize_text(text))
@@ -285,9 +287,16 @@ def calculate_experience_match(resume_text, job_description):
     if required_years is None:
         return 100.0
 
-    resume_years = extract_max_years(resume_text)
+    if config.user_experience_years > 0:
+        resume_years = config.user_experience_years
+    else:
+        resume_years = extract_max_years(resume_text)
+
     if resume_years is None:
         return 0.0
+
+    if resume_years >= required_years:
+        return 100.0
 
     return bounded_percentage((resume_years / required_years) * 100)
 
