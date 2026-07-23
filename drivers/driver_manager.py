@@ -12,5 +12,9 @@ class DriverManager:
 
     def stop_driver(self):
         if self.driver is not None:
-            self.driver.quit()
-            self.driver = None
+            try:
+                self.driver.quit()
+            except Exception:
+                pass
+            finally:
+                self.driver = None

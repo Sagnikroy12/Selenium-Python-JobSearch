@@ -15,8 +15,34 @@ from pypdf import PdfReader
 from sentence_transformers import SentenceTransformer, util
 from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
 
+from utils.helpers import required_env
 
-EMBEDDING_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
+
+_embedding_model = None
+
+
+def _get_embedding_model():
+    """Lazy-load the SentenceTransformer model on first use."""
+    global _embedding_model
+    if _embedding_model is None:
+        _embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+    return _embedding_model
+
+
+# --- ATS scoring constants ---
+WEIGHT_SEMANTIC = 0.25
+WEIGHT_SKILL = 0.30
+WEIGHT_KEYWORD = 0.20
+WEIGHT_TITLE = 0.10
+WEIGHT_EXPERIENCE = 0.10
+WEIGHT_EDUCATION = 0.05
+
+TOP_KEYWORDS_N = 18
+MAX_MISSING_SKILLS = 12
+
+THRESHOLD_STRONG = 80
+THRESHOLD_GOOD = 65
+THRESHOLD_MODERATE = 45
 
 
 ATS_SCORE_COLUMN = "ATS Score"
@@ -168,16 +194,12 @@ def calculate_semantic_match(resume_text, job_description, resume_embedding=None
 
     try:
         if resume_embedding is None:
-            resume_embedding = EMBEDDING_MODEL.encode(resume, convert_to_tensor=True)
-        job_embedding = EMBEDDING_MODEL.encode(description, convert_to_tensor=True)
+            resume_embedding = _get_embedding_model().encode(resume, convert_to_tensor=True)
+        job_embedding = _get_embedding_model().encode(description, convert_to_tensor=True)
         similarity = float(util.cos_sim(resume_embedding, job_embedding).item())
         return bounded_percentage(similarity * 100)
     except (ValueError, RuntimeError):
         return 0.0
-
-
-def calculate_match_percentage(resume_text, job_description):
-    return calculate_semantic_match(resume_text, job_description)
 
 
 def calculate_ats_score(resume_text, job_description, job_title="", resume_embedding=None):
@@ -215,12 +237,12 @@ def calculate_ats_score(resume_text, job_description, job_title="", resume_embed
     education_bonus = calculate_education_bonus(resume, description)
 
     weighted_score = (
-        semantic_match * 0.25
-        + skill_match * 0.30
-        + keyword_match * 0.20
-        + title_match * 0.10
-        + experience_match * 0.10
-        + education_bonus * 0.05
+        semantic_match * WEIGHT_SEMANTIC
+        + skill_match * WEIGHT_SKILL
+        + keyword_match * WEIGHT_KEYWORD
+        + title_match * WEIGHT_TITLE
+        + experience_match * WEIGHT_EXPERIENCE
+        + education_bonus * WEIGHT_EDUCATION
     )
 
     ats_score = bounded_percentage(weighted_score)
@@ -233,7 +255,7 @@ def calculate_ats_score(resume_text, job_description, job_title="", resume_embed
         experience_match=experience_match,
         education_bonus=education_bonus,
         matched_skills=matched_skills,
-        missing_skills=missing_skills[:12],
+        missing_skills=missing_skills[:MAX_MISSING_SKILLS],
         recommendation=build_recommendation(ats_score, missing_skills),
     )
 
@@ -243,7 +265,7 @@ def extract_skills(text):
     return {skill for skill in TECH_SKILLS if skill in normalized}
 
 
-def calculate_keyword_match(resume_text, job_description, top_n=18):
+def calculate_keyword_match(resume_text, job_description, top_n=TOP_KEYWORDS_N):
     keywords = extract_weighted_keywords(job_description, top_n=top_n)
     if not keywords:
         return 0.0
@@ -253,7 +275,7 @@ def calculate_keyword_match(resume_text, job_description, top_n=18):
     return percentage(matched_weight, total_weight)
 
 
-def extract_weighted_keywords(text, top_n=18):
+def extract_weighted_keywords(text, top_n=TOP_KEYWORDS_N):
     tokens = [
         token
         for token in WORD_PATTERN.findall(normalize_text(text))
@@ -309,11 +331,11 @@ def calculate_education_bonus(resume_text, job_description):
 
 
 def build_recommendation(ats_score, missing_skills):
-    if ats_score >= 80:
+    if ats_score >= THRESHOLD_STRONG:
         return "Strong match. Apply soon and tailor the opening summary."
-    if ats_score >= 65:
+    if ats_score >= THRESHOLD_GOOD:
         return "Good match. Add missing priority skills before applying."
-    if ats_score >= 45:
+    if ats_score >= THRESHOLD_MODERATE:
         return "Moderate match. Customize resume bullets for this role."
     if missing_skills:
         return "Low match. Focus on missing skills before applying."
@@ -338,7 +360,7 @@ def score_jobs_excel(excel_path, resume_pdf_path):
         raise FileNotFoundError(f"Scraped jobs Excel file not found: {path}")
 
     resume_text = extract_resume_text(resume_pdf_path)
-    resume_embedding = EMBEDDING_MODEL.encode(normalize_text(resume_text), convert_to_tensor=True)
+    resume_embedding = _get_embedding_model().encode(normalize_text(resume_text), convert_to_tensor=True)
     df = pd.read_excel(path)
 
     if JOB_DESCRIPTION_COLUMN not in df.columns:
@@ -435,13 +457,6 @@ def build_top_matches_html(top_matches):
   </body>
 </html>
 """
-
-
-def required_env(name):
-    value = os.getenv(name)
-    if not value:
-        raise RuntimeError(f"Missing required environment variable: {name}")
-    return value
 
 
 def send_top_matches_email(top_matches, recipient_email):

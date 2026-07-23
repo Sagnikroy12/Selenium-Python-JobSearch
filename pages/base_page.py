@@ -49,9 +49,6 @@ class BasePage:
         except Exception as e:
             print(f"Failed to remove overlays: {e}")
 
-    # Keep the old name as an alias so existing callers are not broken.
-    remove_sign_in_modal = remove_overlays
-
     def click(self, locator):
         """4-phase adaptive click with overlay removal and JS fallback.
 
@@ -105,18 +102,19 @@ class BasePage:
         """Types value into the locator, completely clearing it via Ctrl+A and Backspace."""
         try:
             element = self.wait.until(EC.visibility_of_element_located(locator))
-            element.click()
-            element.send_keys(Keys.CONTROL + "a")
-            element.send_keys(Keys.BACKSPACE)
-            element.send_keys(value)
-        except Exception:
-            print(f"Type failed on {locator}, clearing overlays and retrying...")
+            self._clear_and_type(element, value)
+        except Exception as exc:
+            print(f"Type failed on {locator}: {type(exc).__name__}. Clearing overlays and retrying...")
             self.remove_overlays()
             element = self.wait.until(EC.visibility_of_element_located(locator))
-            element.click()
-            element.send_keys(Keys.CONTROL + "a")
-            element.send_keys(Keys.BACKSPACE)
-            element.send_keys(value)
+            self._clear_and_type(element, value)
+
+    def _clear_and_type(self, element, value):
+        """Select all text, delete it, then type the new value."""
+        element.click()
+        element.send_keys(Keys.CONTROL + "a")
+        element.send_keys(Keys.BACKSPACE)
+        element.send_keys(value)
 
     def send_keys(self, keys, locator=None):
         """Sends key events to the specified locator or to the currently active element if locator is None."""

@@ -4,12 +4,7 @@ import ssl
 from email.message import EmailMessage
 from pathlib import Path
 
-
-def required_env(name):
-    value = os.getenv(name)
-    if not value:
-        raise RuntimeError(f"Missing required environment variable: {name}")
-    return value
+from utils.helpers import required_env
 
 
 def main():

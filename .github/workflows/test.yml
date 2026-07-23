@@ -125,4 +125,4 @@ jobs:
 
       - name: Run pylint
         run: |
-          pylint **/*.py --exit-zero --output-format=text || true
+          pylint **/*.py --exit-zero --output-format=text

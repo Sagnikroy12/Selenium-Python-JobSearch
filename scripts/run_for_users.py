@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import subprocess
 import time
 import sys
@@ -91,7 +92,6 @@ def main():
         location = user.get("location", "Hyderabad")
         file_id_raw = user.get("gdrive_file_id", "")
         # Robustly extract just the file ID if a full URL was provided
-        import re
         file_id = file_id_raw
         if "drive.google.com" in file_id_raw:
             match = re.search(r"[-\w]{25,}", file_id_raw)
@@ -159,10 +159,10 @@ def main():
             print(f"Sleeping {sleep_secs}s before next user...")
             time.sleep(sleep_secs)
 
-    # if admin_email:
-    #     send_admin_summary(results, admin_email)
-    # else:
-    #     print("ADMIN_EMAIL not set. Skipping admin summary email.")
+    if admin_email:
+        send_admin_summary(results, admin_email)
+    else:
+        print("ADMIN_EMAIL not set. Skipping admin summary email.")
     print("Batch processing complete.")
 
 

@@ -64,8 +64,8 @@ def main():
         if driver_manager is not None:
             try:
                 driver_manager.stop_driver()
-            except Exception:
-                pass
+            except Exception as cleanup_err:
+                print(f"Cleanup warning: {cleanup_err}")
 
         sys.exit(1)
 
