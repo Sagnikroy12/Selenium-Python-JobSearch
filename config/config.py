@@ -28,7 +28,6 @@ class FrameworkConfig:
     reports_dir: Path = Path("reports")
     keep_browser_open: bool = _get_bool_env("KEEP_BROWSER_OPEN", False)
     headless: bool = _get_bool_env("HEADLESS", True)
-    # headless: bool = _get_bool_env("HEADLESS", False)
     chrome_bin: str = os.getenv("CHROME_BIN", "")
     chromedriver_path: str = os.getenv("CHROMEDRIVER_PATH", "")
     user_agent: str = os.getenv("USER_AGENT", "")

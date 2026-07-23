@@ -22,7 +22,7 @@ def main():
     smtp_username = required_env("SMTP_USERNAME")
     smtp_password = required_env("SMTP_PASSWORD")
     sender = os.getenv("MAIL_FROM") or smtp_username
-    recipient = os.getenv("MAIL_TO") or "morphgamingstop@gmail.com"
+    recipient = os.getenv("MAIL_TO") or "recipient@example.com"
 
     message = EmailMessage()
     message["Subject"] = os.getenv("MAIL_SUBJECT", "Daily LinkedIn jobs Excel report")

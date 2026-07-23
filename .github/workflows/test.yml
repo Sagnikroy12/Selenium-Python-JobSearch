@@ -88,7 +88,7 @@ jobs:
           CHROME_BIN: /usr/bin/chromium
           CHROMEDRIVER_PATH: /usr/bin/chromium-driver
         run: |
-          python -m pytest tests/test_login.py -v --tb=short --timeout=300 -m selenium || true
+          python -m pytest tests/test_login.py -v --tb=short --timeout=300 -m selenium
 
       - name: Upload failure screenshots
         if: failure()

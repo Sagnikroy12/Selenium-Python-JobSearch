@@ -1,15 +1,17 @@
+import random
 import time
+import urllib.parse
 
 import requests
 from bs4 import BeautifulSoup
 from selenium.common.exceptions import JavascriptException
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
 
 from config.config import config
 from Locators.homepageLocators import HomepageLocators
 from pages.base_page import BasePage
 from utils.excel_writer import ExcelWriter
+from utils.retry import retry_on_exception
 
 
 class JobDescriptionFetchError(Exception):
@@ -26,9 +28,7 @@ class HomePage(BasePage):
         pass
 
     def search_for_jobs(self, job_title, location):
-        import urllib.parse
-        import random
-        
+
         encoded_title = urllib.parse.quote(job_title)
         encoded_location = urllib.parse.quote(location)
         
@@ -117,6 +117,7 @@ class HomePage(BasePage):
 
         return self._fetch_description_via_voyager_api(job_id)
 
+    @retry_on_exception(max_retries=3, base_delay=2.0, exceptions=(JobDescriptionFetchError,))
     def _fetch_description_via_guest_api(self, job_id):
         url = self.locators.GUEST_JOB_API_URL.format(job_id=job_id)
         session = requests.Session()
@@ -142,6 +143,7 @@ class HomePage(BasePage):
             return ""
         return markup.get_text(separator=" ").strip()
 
+    @retry_on_exception(max_retries=3, base_delay=2.0, exceptions=(JobDescriptionFetchError,))
     def _fetch_description_via_voyager_api(self, job_id):
         script = """
         const jobId = arguments[0];
@@ -187,7 +189,8 @@ class HomePage(BasePage):
         return (result or "").strip()
 
     def _fetch_job_description_via_ui(self, index):
-        current_job_locator = (By.XPATH, self.locators.JOB_LIST[1].format(index=index))
+        _by, xpath_template = self.locators.JOB_LIST
+        current_job_locator = (By.XPATH, xpath_template.format(index=index))
         self.click(current_job_locator)
         time.sleep(2)
         return self.driver.find_element(*self.locators.JOB_DESCRIPTION).text.strip()
