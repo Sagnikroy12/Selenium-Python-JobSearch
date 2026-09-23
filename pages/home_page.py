@@ -34,6 +34,8 @@ class HomePage(BasePage):
         
         # Direct URL mapping with pre-injected 24-hour time filter (f_TPR=r86400)
         direct_target_url = f"https://www.linkedin.com/jobs/search?keywords={encoded_title}&location={encoded_location}&f_TPR=r86400"
+
+        # https://www.linkedin.com/jobs/search?keywords=SDET&location=bangalore&f_TPR=r86400
         
         print(f"Injecting direct target URL: {direct_target_url}")
         self.open(direct_target_url)

@@ -86,9 +86,9 @@ docker build -t daily-job-matcher .
 ```bash
 docker run --rm \
   -e HEADLESS=true \
-  -e RESUME_PDF_PATH="Sagnik_Roy_SDET_Resume_14-07-2026.pdf" \
+  -e RESUME_PDF_PATH="Sagnik_Roy_SDET_21-09-2026.pdf" \
   -v "$(pwd)/artifacts:/app/artifacts" \
-  -v "$(pwd)/Sagnik_Roy_SDET_Resume_14-07-2026.pdf:/app/Sagnik_Roy_SDET_Resume_14-07-2026.pdf" \
+  -v "$(pwd)/Sagnik_Roy_SDET_21-09-2026.pdf:/app/Sagnik_Roy_SDET_21-09-2026.pdf" \
   daily-job-matcher
 ```
 
@@ -99,10 +99,17 @@ python main_job_bot.py
 
 ## GitHub Actions Workflows
 
-### Daily Job Matcher Workflow
-- Triggers: Daily at 7:00 AM Asia/Kolkata, manual dispatch
+### Daily Job Matcher Workflow (`daily_job_matcher.yml`)
+- Triggers: Daily at 7:00 AM Asia/Kolkata (01:30 UTC), manual dispatch
+- Target: `SDET`, `Hyderabad` / `India`, `3.5` years exp, `Sagnik_Roy_SDET_21-09-2026.pdf`
 - Steps: Checkout, prepare directories, build Docker, run job scraper, ATS matcher, email report
-- Artifacts: Scored Excel report, failure screenshots
+- Artifacts: Scored Excel report (`scored-linkedin-jobs`), failure screenshots
+
+### Daily Remote Job Matcher Workflow (`daily_remote_job_matcher.yml`)
+- Triggers: Daily at 7:15 AM Asia/Kolkata (01:45 UTC), manual dispatch
+- Target: `SDET`, `Remote`, `3.5` years exp, `Sagnik_Roy_SDET_21-09-2026.pdf`
+- Isolation: Independent workflow that does not rely on or get overridden by GitHub Actions repository variables (`vars.*`).
+- Artifacts: Scored Remote Excel report (`scored-remote-linkedin-jobs`), failure screenshots
 
 ### Test Workflow
 - Triggers: Push to main/dev, pull requests, manual dispatch

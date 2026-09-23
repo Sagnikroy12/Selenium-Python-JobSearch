@@ -1,12 +1,10 @@
-name: Daily Job Matcher
+name: Daily Remote Job Matcher
 
 on:
   schedule:
-    # 07:00 AM Asia/Kolkata is 01:30 UTC
-    - cron: "30 1 * * *"
+    # 07:15 AM Asia/Kolkata is 01:45 UTC
+    - cron: "45 1 * * *"
   workflow_dispatch:
-  repository_dispatch:
-    types: [daily-trigger]
     inputs:
       resume_pdf_path:
         description: "Resume PDF path inside the repository or mounted workspace"
@@ -19,18 +17,20 @@ on:
       job_location_target:
         description: "Job location search target"
         required: false
-        default: "Hyderabad"
+        default: "Remote"
       recipient_email:
-        description: "Email address that receives the top 10 match report"
+        description: "Email address that receives the top 10 remote match report"
         required: false
         default: "morphgamingstop@gmail.com"
       user_experience_years:
         description: "User experience in years for ATS matching"
         required: false
         default: "3.5"
+  repository_dispatch:
+    types: [daily-remote-trigger]
 
 jobs:
-  run-job-matcher:
+  run-remote-job-matcher:
     runs-on: ubuntu-latest
 
     steps:
@@ -41,11 +41,11 @@ jobs:
         run: mkdir -p artifacts reports
 
       - name: Build Docker image
-        run: docker build -t daily-job-matcher .
+        run: docker build -t daily-remote-job-matcher .
 
       - name: Verify resume file exists
         run: |
-          RESUME_PDF_PATH="${{ inputs.resume_pdf_path || vars.RESUME_PDF_PATH || 'Sagnik_Roy_SDET_21-09-2026.pdf' }}"
+          RESUME_PDF_PATH="${{ inputs.resume_pdf_path || 'Sagnik_Roy_SDET_21-09-2026.pdf' }}"
           echo "--- Workspace root listing ---"
           ls -la "${{ github.workspace }}"
           echo "--- Looking for resume: ${RESUME_PDF_PATH} ---"
@@ -60,18 +60,13 @@ jobs:
             exit 1
           fi
 
-      - name: Run scraper, ATS matcher, and email report
+      - name: Run remote scraper, ATS matcher, and email report
         env:
           INPUT_RESUME: ${{ inputs.resume_pdf_path }}
-          VAR_RESUME: ${{ vars.RESUME_PDF_PATH }}
           INPUT_TITLE: ${{ inputs.job_title_target }}
-          VAR_TITLE: ${{ vars.JOB_TITLE_TARGET }}
           INPUT_LOCATION: ${{ inputs.job_location_target }}
-          VAR_LOCATION: ${{ vars.JOB_LOCATION_TARGET }}
           INPUT_EMAIL: ${{ inputs.recipient_email }}
-          VAR_EMAIL: ${{ vars.RECIPIENT_EMAIL }}
           INPUT_EXP: ${{ inputs.user_experience_years }}
-          VAR_EXP: ${{ vars.USER_EXPERIENCE_YEARS }}
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
           SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
@@ -79,13 +74,14 @@ jobs:
           MAIL_FROM: ${{ secrets.MAIL_FROM }}
           EMAIL_SUBJECT: ${{ secrets.EMAIL_SUBJECT }}
         run: |
-          RESUME_PDF_PATH="${INPUT_RESUME:-${VAR_RESUME:-Sagnik_Roy_SDET_21-09-2026.pdf}}"
-          JOB_TITLE_TARGET="${INPUT_TITLE:-${VAR_TITLE:-SDET}}"
-          JOB_LOCATION_TARGET="${INPUT_LOCATION:-${VAR_LOCATION:-Hyderabad}}"
-          RECIPIENT_EMAIL="${INPUT_EMAIL:-${VAR_EMAIL:-morphgamingstop@gmail.com}}"
-          USER_EXPERIENCE_YEARS="${INPUT_EXP:-${VAR_EXP:-3.5}}"
+          # Explicitly self-contained: Does NOT read repo vars.* to eliminate variable collisions
+          RESUME_PDF_PATH="${INPUT_RESUME:-Sagnik_Roy_SDET_21-09-2026.pdf}"
+          JOB_TITLE_TARGET="${INPUT_TITLE:-SDET}"
+          JOB_LOCATION_TARGET="${INPUT_LOCATION:-Remote}"
+          RECIPIENT_EMAIL="${INPUT_EMAIL:-morphgamingstop@gmail.com}"
+          USER_EXPERIENCE_YEARS="${INPUT_EXP:-3.5}"
           FINAL_SMTP_PORT="${SMTP_PORT:-587}"
-          FINAL_EMAIL_SUBJECT="${EMAIL_SUBJECT:-Daily ATS Job Match Report}"
+          FINAL_EMAIL_SUBJECT="${EMAIL_SUBJECT:-Daily Remote ATS Job Match Report}"
 
           docker run --rm \
             -e HEADLESS=true \
@@ -104,13 +100,13 @@ jobs:
             -v "${{ github.workspace }}:/app/workspace:ro" \
             -v "${{ github.workspace }}/artifacts:/app/artifacts" \
             -v "${{ github.workspace }}/reports:/app/reports" \
-            daily-job-matcher
+            daily-remote-job-matcher
 
-      - name: Upload scored Excel report
+      - name: Upload scored Remote Excel report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: scored-linkedin-jobs
+          name: scored-remote-linkedin-jobs
           path: artifacts/linkedin_jobs.xlsx
           if-no-files-found: warn
 
@@ -118,6 +114,6 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: selenium-failure-screenshots
+          name: remote-selenium-failure-screenshots
           path: reports/
           if-no-files-found: ignore

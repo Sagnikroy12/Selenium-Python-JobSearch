@@ -287,10 +287,9 @@ def calculate_experience_match(resume_text, job_description):
     if required_years is None:
         return 100.0
 
-    if config.user_experience_years > 0:
+    resume_years = extract_max_years(resume_text)
+    if resume_years is None and config.user_experience_years > 0:
         resume_years = config.user_experience_years
-    else:
-        resume_years = extract_max_years(resume_text)
 
     if resume_years is None:
         return 0.0
