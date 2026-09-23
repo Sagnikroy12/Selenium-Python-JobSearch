@@ -5,6 +5,8 @@ on:
     # 07:15 AM Asia/Kolkata is 01:45 UTC
     - cron: "45 1 * * *"
   workflow_dispatch:
+  repository_dispatch:
+    types: [daily-trigger]
     inputs:
       resume_pdf_path:
         description: "Resume PDF path inside the repository or mounted workspace"
