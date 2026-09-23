@@ -2,11 +2,9 @@ name: Daily Remote Job Matcher
 
 on:
   schedule:
-    # 07:15 AM Asia/Kolkata is 01:45 UTC
-    - cron: "45 1 * * *"
+    # 07:00 AM Asia/Kolkata is 01:30 UTC
+    - cron: "30 1 * * *"
   workflow_dispatch:
-  repository_dispatch:
-    types: [daily-trigger]
     inputs:
       resume_pdf_path:
         description: "Resume PDF path inside the repository or mounted workspace"
@@ -29,7 +27,7 @@ on:
         required: false
         default: "3.5"
   repository_dispatch:
-    types: [daily-remote-trigger]
+    types: [daily-trigger]
 
 jobs:
   run-remote-job-matcher:
